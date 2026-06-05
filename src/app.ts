@@ -11,6 +11,8 @@ import type { GameState, GuessResult } from "./engine.ts";
 
 const h = React.createElement;
 
+const isAZ = (c: string): boolean => c >= "A" && c <= "Z"; // a guessable letter; anything else is auto-placed punctuation
+
 // Terminal colours echo the design's resolved sRGB (green hit / red miss).
 const GOOD = "#54dd7d";
 const BAD = "#f94741";
@@ -281,7 +283,7 @@ export function App({ initialPhrase, snapshot }: AppProps): React.ReactElement {
   const st = game.state();
   const dead = st.status === "loss";
   const chip = chipFor(st);
-  const letterCount = game.words.reduce((n, w) => n + w.length, 0);
+  const letterCount = game.words.reduce((n, w) => n + [...w].filter(isAZ).length, 0);
 
   // --- header ---
   const header = h(
@@ -307,6 +309,7 @@ export function App({ initialPhrase, snapshot }: AppProps): React.ReactElement {
         Box,
         { key: wi, gap: 1 },
         ...[...word].map((ch, ci) => {
+          if (!isAZ(ch)) return h(Text, { key: ci, color: DIM }, ch); // punctuation: always shown, never guessed
           const shown = st.revealed.has(ch);
           let color = DIM;
           let glyph = "·";

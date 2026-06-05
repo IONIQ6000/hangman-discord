@@ -226,6 +226,19 @@ async function main(): Promise<void> {
   console.log(`  node rss: ${(rss0 / 1e6).toFixed(0)}MB -> ${(rss1 / 1e6).toFixed(0)}MB (Δ${dMB.toFixed(0)}MB)`);
   check(dMB < 150, "node memory stable over 120 renders (Δ < 150MB)");
 
+  // 3b) Tall boards — a phrase too long for 1350px grows the board downward and
+  // must be captured whole (the renderer grows the viewport), never clipped.
+  console.log("\n[tall boards]");
+  {
+    const tall = state("the quick brown fox jumps over the lazy dog", []);
+    const a = pngInfo(await renderPng(tall.st, tall.phrase));
+    check(a.sig && a.w === 1080 && a.h > 1350, `a long phrase grows the board (${a.w}x${a.h})`);
+    const b = pngInfo(await renderPng(tall.st, tall.phrase));
+    check(b.h === a.h, `the grown board renders at a stable height (${b.h})`);
+    const short = pngInfo(await renderPng(cases.fresh.st, cases.fresh.phrase));
+    check(short.w === 1080 && short.h === 1350, `a short board is 1080x1350 again after a tall one (${short.w}x${short.h})`);
+  }
+
   // 4) Clipboard integrity — render -> copy -> read back, byte-identical.
   console.log("\n[clipboard integrity]");
   for (const k of ["fresh", "miss", "win", "loss"] as const) {

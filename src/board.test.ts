@@ -72,15 +72,27 @@ test("word grouping and tile counts match the phrase exactly", () => {
   assert.equal(count(html, /class="hm-tile/g), 1 + 2 + 3);
 });
 
+test("punctuation is placed as a borderless glyph, not a guessable tile", () => {
+  const html = markup("don't");
+  assert.equal(count(html, /class="hm-punct"/g), 1, "the apostrophe is auto-placed");
+  assert.equal(count(html, /class="hm-tile/g), 4, "only D O N T are tiles");
+  assert.ok(html.includes(`<div class="hm-punct">'</div>`), "apostrophe glyph shown");
+});
+
+test("the ampersand glyph is HTML-escaped", () => {
+  assert.ok(markup("r & b").includes(`<div class="hm-punct">&amp;</div>`));
+});
+
 test("empty wrong column renders the placeholder dash", () => {
   assert.ok(markup("cat").includes("hm-empty"));
   assert.ok(!markup("cat", ["z"]).includes("hm-empty"), "dash gone once a wrong letter exists");
 });
 
-test("document is well-formed and sized for Discord (1080x1350)", () => {
+test("document is well-formed and sized for Discord (1080 wide, ≥1350 tall)", () => {
   const doc = boardDocument(new Hangman("cat").state(), "CAT");
   assert.ok(doc.startsWith("<!doctype html>"));
-  assert.ok(doc.includes("width: 1080px") && doc.includes("height: 1350px"));
+  assert.ok(doc.includes("width: 1080px"), "fixed Discord width");
+  assert.ok(doc.includes("min-height: 1350px"), "1350 is a floor; the board grows taller to fit");
   assert.equal(count(doc, /class="hm-frame"/g), 1);
   assert.ok(doc.includes('viewBox="0 0 340 440"'), "figure svg present");
 });

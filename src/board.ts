@@ -17,14 +17,17 @@ const CSS = `
   --bad:  oklch(0.655 0.215 27);
   --dim:  rgba(255, 255, 255, 0.34);
   --rule: rgba(255, 255, 255, 0.18);
+  --punct: rgba(255, 255, 255, 0.72);
   --sans: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: #000; }
-#board { width: ${BOARD_W}px; height: ${BOARD_H}px; }
+/* Width is fixed for Discord; height is a floor, not a cap — a long phrase
+   wraps to more rows and the board grows downward instead of clipping. */
+#board { width: ${BOARD_W}px; }
 
 .hm-frame {
-  width: 100%; height: 100%;
+  width: 100%; min-height: ${BOARD_H}px;
   background: #000; color: #fff;
   font-family: var(--sans);
   padding: 46px 54px 50px;
@@ -40,15 +43,26 @@ html, body { margin: 0; padding: 0; background: #000; }
 .hm-gtile { font-size: 72px; font-weight: 800; color: var(--bad); line-height: 1; text-decoration: line-through; text-decoration-thickness: 6px; }
 .hm-gtile.recent { background: var(--bad); color: #000; text-decoration: none; padding: 5px 16px; line-height: 1; }
 .hm-empty { font-size: 64px; font-weight: 800; color: var(--dim); }
-.hm-phrase { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.hm-phrase { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px 0; }
 .hm-words { display: flex; justify-content: center; align-items: flex-end; gap: 40px; flex-wrap: wrap; }
-.hm-word { display: flex; gap: 10px; }
+/* Words wrap between each other; a single word longer than the row wraps its
+   own tiles too (row-gap 16) rather than running off the edge. */
+.hm-word { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px 10px; max-width: 100%; }
 .hm-tile { width: 104px; height: 156px; border: 4px solid var(--dim); display: flex; align-items: center; justify-content: center; font-size: 88px; font-weight: 800; color: #fff; }
 .hm-tile.filled { border-color: #fff; }
 .hm-tile.hit { border-color: var(--good); color: var(--good); }
 .hm-tile.win { border-color: var(--good); color: var(--good); }
 .hm-tile.answer { border-color: var(--bad); color: var(--bad); }
+/* Auto-placed punctuation: borderless, same height as a tile so it sits on the
+   same row, but only as wide as the glyph needs. */
+.hm-punct { height: 156px; min-width: 28px; padding: 0 2px; display: flex; align-items: center; justify-content: center; font-size: 88px; font-weight: 800; line-height: 1; color: var(--punct); }
 `;
+
+const isAZ = (c: string): boolean => c >= "A" && c <= "Z"; // a guessable tile; anything else in a word is punctuation
+
+/** Escape the few characters that aren't safe as raw HTML text (e.g. the
+ *  ampersand glyph). Letters are untouched; only punctuation can need this. */
+const esc = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 // --- FigureBlueprint, ported from vea/app.jsx -------------------------------
 function figureSvg(stage: number, dead: boolean): string {
@@ -90,6 +104,8 @@ function phraseHtml(state: GameState, phrase: string): string {
     .map((w) => {
       const tiles = [...w]
         .map((ch) => {
+          // Punctuation isn't a guessable tile — it's shown from the start.
+          if (!isAZ(ch)) return `<div class="hm-punct">${esc(ch)}</div>`;
           const shown = state.revealed.has(ch);
           let cls = "hm-tile";
           let glyph = "";
@@ -105,7 +121,7 @@ function phraseHtml(state: GameState, phrase: string): string {
           } else {
             cls += " blank";
           }
-          return `<div class="${cls}">${glyph}</div>`;
+          return `<div class="${cls}">${esc(glyph)}</div>`;
         })
         .join("");
       return `<div class="hm-word">${tiles}</div>`;

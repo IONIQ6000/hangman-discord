@@ -212,6 +212,16 @@ test("/new starts a different phrase", async () => {
   unmount();
 });
 
+test("punctuation shows in the phrase and isn't counted as a letter", async () => {
+  const { lastFrame, stdin, unmount } = setup("ab");
+  await tick();
+  await enter(stdin, "/new don't stop");
+  const f = clean(lastFrame());
+  assert.match(f, /2 words, 8 letters/); // D O N T S T O P; the apostrophe isn't a letter
+  assert.match(f, /'/); // the apostrophe is on the board from the start
+  unmount();
+});
+
 // ---- comma-separated batch guesses ----
 
 test("comma-separated guesses are applied in order", async () => {

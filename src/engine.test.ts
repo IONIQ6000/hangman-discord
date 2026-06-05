@@ -28,7 +28,8 @@ test("repeat guess of a tried letter is a no-op", () => {
 
 test("invalid input is rejected without penalty", () => {
   const g = new Hangman("cat");
-  for (const bad of ["1", "!", "", "  ", "a1", "a-b", "_"]) {
+  // digits, underscores, @, and lone/standalone punctuation are all non-guesses
+  for (const bad of ["1", "!", ",", "'", "", "  ", "a1", "a_b", "@@"]) {
     assert.equal(g.guess(bad), "invalid");
   }
   assert.equal(g.state().wrong.length, 0);
@@ -74,15 +75,52 @@ test("no guesses accepted after the game is over", () => {
   assert.equal(g.guess("x"), "over");
 });
 
-test("phrase validation rejects non-letters and empties", () => {
+test("phrase validation rejects digits, unknown symbols, and empties", () => {
   assert.throws(() => new Hangman("ab3"));
-  assert.throws(() => new Hangman("hi!"));
-  assert.throws(() => new Hangman(""));
+  assert.throws(() => new Hangman("a#b"));
+  assert.throws(() => new Hangman("a_b"));
+  assert.throws(() => new Hangman("")); // no letters
   assert.throws(() => new Hangman("   "));
+  assert.throws(() => new Hangman("!?,")); // punctuation only -> nothing to guess
 });
 
 test("phrase normalises case and whitespace", () => {
   const g = new Hangman("  touch   grass  ");
   assert.equal(g.phrase, "TOUCH GRASS");
   assert.deepEqual(g.words, ["TOUCH", "GRASS"]);
+});
+
+// ---- punctuation ----------------------------------------------------------
+
+test("phrase keeps common punctuation; only letters are counted/guessable", () => {
+  const g = new Hangman("don't, stop!");
+  assert.equal(g.phrase, "DON'T, STOP!");
+  assert.deepEqual(g.words, ["DON'T,", "STOP!"]);
+});
+
+test("punctuation is auto-placed: revealing the letters wins despite it", () => {
+  const g = new Hangman("don't");
+  for (const c of "DONT") assert.equal(g.guess(c), "hit");
+  assert.equal(g.status, "win", "D O N T win the game; the apostrophe was never a tile");
+  assert.equal(g.misses, 0);
+});
+
+test("a lone punctuation guess is invalid, not a miss", () => {
+  const g = new Hangman("don't");
+  assert.equal(g.guess("'"), "invalid");
+  assert.equal(g.guess(","), "invalid");
+  assert.equal(g.misses, 0);
+});
+
+test("word and phrase guesses match while ignoring punctuation", () => {
+  const g = new Hangman("don't stop");
+  assert.equal(g.guess("dont"), "word-hit"); // apostrophe optional
+  for (const c of "DONT") assert.ok(g.state().revealed.has(c));
+  assert.equal(g.guess("don't stop"), "solved"); // typing it is fine too
+  assert.equal(g.status, "win");
+});
+
+test("unicode quotes and dashes fold to ASCII", () => {
+  const g = new Hangman("don’t — done"); // curly apostrophe + em dash
+  assert.equal(g.phrase, "DON'T - DONE");
 });

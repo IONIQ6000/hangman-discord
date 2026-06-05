@@ -11,7 +11,13 @@ foundation as Claude Code): a live board, a bordered input, slash commands, and
 **undo that steps all the way back to the start**.
 
 The board image is the **Blueprint** design from `vea/` — a pure-black 1080×1350
-portrait that sits invisibly in dark Discord.
+portrait that sits invisibly in dark Discord. The width is fixed; a long phrase
+just wraps onto more rows and the board **grows taller** instead of clipping.
+
+The phrase can include **common punctuation** (`' " , . ! ? ; : - ( ) &`). It's
+placed on the board from the start — never a tile to guess, never a miss — so
+`Don't stop!` shows the `'` and `!` while you still guess D, O, N, T… (you can
+type `dont` for the word — the apostrophe is optional).
 
 ## Setup
 
@@ -97,6 +103,10 @@ canvas and isn't used at runtime.
 - **Figure stage = wrong-guess count** (0–6); a loss turns the figure red and
   reveals the answer. **Wrong word/phrase guesses cost nothing** — only letter
   guesses can miss.
+- **Only A–Z is guessable.** Punctuation is auto-placed and matching ignores it,
+  so the win/loss logic and figure are unchanged by it. **Height is a floor, not
+  a cap** (`min-height: 1350`): the renderer measures the laid-out board and
+  grows the headless viewport so a wrapped, taller board is captured whole.
 
 ### Possible next steps
 

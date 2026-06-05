@@ -36,6 +36,14 @@ export async function renderPng(state: GameState, phrase: string): Promise<Buffe
     await page.evaluate(() => document.fonts.ready); // ensure system fonts are laid out
     const el = await page.$("#board");
     if (!el) throw new Error("#board element not found");
+    // A long phrase makes the board grow past BOARD_H. The viewport only needs
+    // to grow (never shrink) — an over-tall viewport still crops to #board, so a
+    // later short board renders identically. The element screenshot below
+    // captures the full #board box regardless, this just keeps it on-screen.
+    const fullHeight = Math.ceil(await el.evaluate((node) => node.getBoundingClientRect().height));
+    if (fullHeight > page.viewportSize()!.height) {
+      await page.setViewportSize({ width: BOARD_W, height: fullHeight });
+    }
     return await el.screenshot({ type: "png" });
   } finally {
     release(); // let the next queued render proceed (even if this one threw)
