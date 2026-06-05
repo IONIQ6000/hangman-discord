@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hangman · Discord Snapshots</title>
+<style>
+  :root {
+    --good: oklch(0.80 0.18 150);
+    --bad:  oklch(0.655 0.215 27);
+    --dim:  rgba(255, 255, 255, 0.34);
+    --rule: rgba(255, 255, 255, 0.18);
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  /* ── frame ───────────────────────────────────────────── */
+  .hm-frame {
+    width: 100%; height: 100%;
+    background: #000; color: #fff;
+    font-family: var(--sans);
+    padding: 46px 54px 50px;
+    display: flex; flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+  /* ── header ──────────────────────────────────────────── */
+  .hm-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding-bottom: 24px; border-bottom: 4px solid #fff;
+  }
+  .hm-wordmark {
+    font-size: 32px; font-weight: 800; letter-spacing: 9px;
+    text-transform: uppercase; line-height: 1;
+  }
+  .hm-wordmark small {
+    display: block; font-family: var(--mono); font-size: 12px;
+    letter-spacing: 4px; color: var(--dim); font-weight: 500; margin-top: 11px;
+  }
+  .hm-chip {
+    display: flex; align-items: baseline; gap: 12px; white-space: nowrap;
+    padding: 11px 20px; border: 3px solid #fff;
+    font-weight: 800; text-transform: uppercase; flex: 0 0 auto;
+  }
+  .hm-chip b { font-size: 25px; letter-spacing: 1.5px; white-space: nowrap; }
+  .hm-chip .k { font-family: var(--mono); font-size: 22px; font-weight: 700; }
+  .hm-chip.good { background: var(--good); color: #000; border-color: var(--good); }
+  .hm-chip.bad  { background: var(--bad);  color: #000; border-color: var(--bad); }
+  .hm-chip.neutral { background: transparent; color: #fff; }
+
+  /* ── stage: figure (pushed left) + wrong letters (to its right) ── */
+  .hm-stage { flex: 0 0 auto; height: 560px; display: flex; align-items: flex-start; gap: 36px; min-height: 0; padding-top: 6px; }
+  .hm-figcol { flex: 0 0 560px; display: flex; align-items: flex-start; justify-content: flex-start; min-width: 0; height: 100%; }
+  .hm-figbox {
+    width: 100%; height: 100%; container-type: size;
+    display: flex; align-items: flex-start; justify-content: flex-start;
+  }
+  .hm-wrong { flex: 1 1 auto; align-self: stretch; display: flex; flex-direction: column; justify-content: flex-start; min-width: 0; padding-top: 4px; }
+  .hm-wrongcol { display: flex; flex-direction: column; align-items: flex-start; gap: 22px; }
+
+  /* ── wrong-letter list (right of the figure) ───────────── */
+  .hm-gtile {
+    font-size: 72px; font-weight: 800; color: var(--bad);
+    line-height: 1; text-decoration: line-through; text-decoration-thickness: 6px;
+  }
+  .hm-gtile.recent {
+    background: var(--bad); color: #000; text-decoration: none;
+    padding: 5px 16px; line-height: 1;
+  }
+  .hm-empty { font-size: 64px; font-weight: 800; color: var(--dim); }
+
+  /* ── phrase ──────────────────────────────────────────── */
+  .hm-phrase { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .hm-words { display: flex; justify-content: center; align-items: flex-end; gap: 40px; flex-wrap: wrap; }
+  .hm-word { display: flex; gap: 10px; }
+  .hm-tile {
+    width: 104px; height: 156px; border: 4px solid var(--dim);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 88px; font-weight: 800; color: #fff;
+  }
+  .hm-tile.filled { border-color: #fff; }
+  .hm-tile.hit { border-color: var(--good); color: var(--good); }
+  .hm-tile.win { border-color: var(--good); color: var(--good); }
+  .hm-tile.answer { border-color: var(--bad); color: var(--bad); }
+  .hm-tile.blank { }
+
+  /* ── figure key strip ────────────────────────────────── */
+  .hm-keyframe { padding-bottom: 44px; }
+  .hm-keyrow { flex: 1; display: flex; gap: 14px; padding-top: 30px; min-height: 0; }
+  .hm-keycell { flex: 1; border: 2px solid var(--rule); display: flex; flex-direction: column; min-width: 0; }
+  .hm-keycell.dead { border-color: var(--bad); }
+  .hm-keyfig { flex: 1; container-type: size; display: flex; align-items: center; justify-content: center; padding: 20px 14px; min-height: 0; }
+  .hm-keycap {
+    border-top: 2px solid var(--rule); padding: 9px 11px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--mono); font-size: 12px; letter-spacing: 1.5px;
+    color: var(--dim); text-transform: uppercase;
+  }
+  .hm-keycell.dead .hm-keycap { border-color: var(--bad); color: var(--bad); }
+
+  /* ── legend card ─────────────────────────────────────── */
+  .hm-legend {
+    width: 100%; height: 100%; background: #000; color: #fff;
+    font-family: var(--sans); padding: 44px 46px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .hm-legend-h { font-size: 13px; font-family: var(--mono); letter-spacing: 4px; color: var(--dim); }
+  .hm-legend p { margin: 0; font-size: 19px; line-height: 1.5; color: rgba(255,255,255,0.86); text-wrap: pretty; }
+  .hm-legend em { font-style: normal; font-weight: 800; }
+  .hm-legend em.g { color: var(--good); }
+  .hm-legend em.r { color: var(--bad); }
+  .hm-legend ul { margin: 2px 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .hm-legend li { font-size: 18px; color: rgba(255,255,255,0.78); }
+  .hm-legend li b { color: #fff; font-weight: 800; }
+  .hm-legend-foot { font-size: 15px !important; color: var(--dim) !important; margin-top: auto !important; border-top: 2px solid var(--rule); padding-top: 16px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<template id="__bundler_thumbnail">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#000" />
+    <g stroke="#fff" stroke-width="4" fill="none">
+      <path d="M22 78 H62" /><path d="M34 78 V26" /><path d="M34 26 H58" /><path d="M58 26 V36" />
+      <circle cx="58" cy="44" r="6" />
+    </g>
+  </svg>
+</template>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+</body>
+</html>

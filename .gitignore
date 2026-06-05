@@ -1,0 +1,8 @@
+# Dependencies
+node_modules/
+
+# Generated board images (regenerate with `npm run shots`)
+out/
+
+# macOS
+.DS_Store

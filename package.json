@@ -1,0 +1,24 @@
+{
+  "name": "hangman-discord",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Terminal hangman that renders the Blueprint design to a Discord-ready image and auto-copies it to the clipboard on each move.",
+  "scripts": {
+    "start": "node src/app.ts",
+    "test": "node --test 'src/**/*.test.ts'",
+    "deeptest": "node src/deeptest.ts",
+    "shots": "node src/smoke.ts"
+  },
+  "dependencies": {
+    "@types/node": "^25.9.1",
+    "ink": "^7.0.5",
+    "ink-text-input": "^6.0.0",
+    "playwright": "^1.60.0",
+    "react": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.16",
+    "ink-testing-library": "^4.0.0"
+  }
+}
