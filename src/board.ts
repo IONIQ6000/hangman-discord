@@ -5,6 +5,7 @@
 // re-expressed as string templates (no React/CDN/Babel at runtime).
 
 import type { GameState } from "./engine.ts";
+import { JETBRAINS_MONO_EXTRABOLD } from "./font.ts";
 
 /** Output size — 1080x1350 (4:5 portrait), pure black so it sits in dark Discord. */
 export const BOARD_W = 1080;
@@ -12,24 +13,37 @@ export const BOARD_H = 1350;
 
 // --- CSS, copied from the design (board-relevant rules only) ----------------
 const CSS = `
+/* The whole board is set in JetBrains Mono ExtraBold — embedded (not a system
+   font) so every render is identical and offline. Its chunky, unmistakable
+   punctuation is the point: an apostrophe reads as an apostrophe even alone
+   between empty tiles. */
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 800;
+  font-display: block;
+  src: url("${JETBRAINS_MONO_EXTRABOLD}") format("woff2");
+}
 :root {
   --good: oklch(0.80 0.18 150);
   --bad:  oklch(0.655 0.215 27);
   --dim:  rgba(255, 255, 255, 0.34);
   --rule: rgba(255, 255, 255, 0.18);
-  --punct: rgba(255, 255, 255, 0.72);
-  --sans: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
+  --punct: rgba(255, 255, 255, 0.78);
+  --font: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: #000; }
-/* Width is fixed for Discord; height is a floor, not a cap — a long phrase
-   wraps to more rows and the board grows downward instead of clipping. */
-#board { width: ${BOARD_W}px; }
+/* 1080x1350 is a floor, not a cap. A multi-word phrase wraps onto more rows and
+   the board grows taller; a single word never breaks, so the board grows wider
+   instead — width: min-content resolves to the widest word (the rest wrap below
+   it). Normal phrases sit at exactly 1080 wide. */
+#board { min-width: ${BOARD_W}px; width: min-content; }
 
 .hm-frame {
   width: 100%; min-height: ${BOARD_H}px;
   background: #000; color: #fff;
-  font-family: var(--sans);
+  font-family: var(--font);
   padding: 46px 54px 50px;
   display: flex; flex-direction: column;
   -webkit-font-smoothing: antialiased;
@@ -45,17 +59,20 @@ html, body { margin: 0; padding: 0; background: #000; }
 .hm-empty { font-size: 64px; font-weight: 800; color: var(--dim); }
 .hm-phrase { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px 0; }
 .hm-words { display: flex; justify-content: center; align-items: flex-end; gap: 40px; flex-wrap: wrap; }
-/* Words wrap between each other; a single word longer than the row wraps its
-   own tiles too (row-gap 16) rather than running off the edge. */
-.hm-word { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px 10px; max-width: 100%; }
+/* Words wrap between each other, but a word never breaks across rows — it stays
+   on one line and the board widens (above) to fit it. */
+.hm-word { display: flex; gap: 10px; }
 .hm-tile { width: 104px; height: 156px; border: 4px solid var(--dim); display: flex; align-items: center; justify-content: center; font-size: 88px; font-weight: 800; color: #fff; }
 .hm-tile.filled { border-color: #fff; }
 .hm-tile.hit { border-color: var(--good); color: var(--good); }
 .hm-tile.win { border-color: var(--good); color: var(--good); }
 .hm-tile.answer { border-color: var(--bad); color: var(--bad); }
 /* Auto-placed punctuation: borderless, same height as a tile so it sits on the
-   same row, but only as wide as the glyph needs. */
-.hm-punct { height: 156px; min-width: 28px; padding: 0 2px; display: flex; align-items: center; justify-content: center; font-size: 88px; font-weight: 800; line-height: 1; color: var(--punct); }
+   same row, but only as wide as the glyph needs. Apostrophes/quotes ride high
+   and commas/periods sit low — where they belong — so they're unmistakable. */
+.hm-punct { height: 156px; min-width: 30px; padding: 0 4px; display: flex; align-items: center; justify-content: center; font-size: 88px; font-weight: 800; line-height: 1; color: var(--punct); }
+.hm-punct.hi { align-items: flex-start; transform: translateY(-7px); }
+.hm-punct.lo { align-items: flex-end; padding-bottom: 30px; }
 `;
 
 const isAZ = (c: string): boolean => c >= "A" && c <= "Z"; // a guessable tile; anything else in a word is punctuation
@@ -104,8 +121,12 @@ function phraseHtml(state: GameState, phrase: string): string {
     .map((w) => {
       const tiles = [...w]
         .map((ch) => {
-          // Punctuation isn't a guessable tile — it's shown from the start.
-          if (!isAZ(ch)) return `<div class="hm-punct">${esc(ch)}</div>`;
+          // Punctuation isn't a guessable tile — it's shown from the start,
+          // nudged high (apostrophes/quotes) or low (commas/periods) to read right.
+          if (!isAZ(ch)) {
+            const pos = "'\"".includes(ch) ? " hi" : ",.".includes(ch) ? " lo" : "";
+            return `<div class="hm-punct${pos}">${esc(ch)}</div>`;
+          }
           const shown = state.revealed.has(ch);
           let cls = "hm-tile";
           let glyph = "";

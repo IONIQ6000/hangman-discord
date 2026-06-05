@@ -33,16 +33,27 @@ export async function renderPng(state: GameState, phrase: string): Promise<Buffe
   try {
     if (!page) throw new Error("renderer not initialised — call initRenderer() first");
     await page.setContent(boardDocument(state, phrase), { waitUntil: "load" });
-    await page.evaluate(() => document.fonts.ready); // ensure system fonts are laid out
+    // Force the embedded @font-face (JetBrains Mono) to finish loading before we
+    // shoot, then wait for layout to settle — otherwise the first frame can rasterise
+    // in a fallback font.
+    await page.evaluate(async () => {
+      await Promise.all([...document.fonts].map((f) => f.load()));
+      await document.fonts.ready;
+    });
     const el = await page.$("#board");
     if (!el) throw new Error("#board element not found");
-    // A long phrase makes the board grow past BOARD_H. The viewport only needs
-    // to grow (never shrink) — an over-tall viewport still crops to #board, so a
-    // later short board renders identically. The element screenshot below
-    // captures the full #board box regardless, this just keeps it on-screen.
-    const fullHeight = Math.ceil(await el.evaluate((node) => node.getBoundingClientRect().height));
-    if (fullHeight > page.viewportSize()!.height) {
-      await page.setViewportSize({ width: BOARD_W, height: fullHeight });
+    // A long phrase grows the board past BOARD_W/BOARD_H (taller for extra rows,
+    // wider for a single word that won't wrap). The viewport only needs to grow
+    // (never shrink) — an over-sized viewport still crops to #board, so a later
+    // small board renders identically. The element screenshot captures the full
+    // #board box regardless; growing the viewport just keeps it on-screen.
+    const box = await el.evaluate((node) => {
+      const r = node.getBoundingClientRect();
+      return { w: Math.ceil(r.width), h: Math.ceil(r.height) };
+    });
+    const vp = page.viewportSize()!;
+    if (box.w > vp.width || box.h > vp.height) {
+      await page.setViewportSize({ width: Math.max(BOARD_W, box.w), height: Math.max(BOARD_H, box.h) });
     }
     return await el.screenshot({ type: "png" });
   } finally {

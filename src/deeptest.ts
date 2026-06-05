@@ -239,6 +239,18 @@ async function main(): Promise<void> {
     check(short.w === 1080 && short.h === 1350, `a short board is 1080x1350 again after a tall one (${short.w}x${short.h})`);
   }
 
+  // 3c) Wide boards — a single word never wraps; the board grows wider to fit it
+  // (one line), so its height stays at the 1350 floor.
+  console.log("\n[wide boards]");
+  {
+    const wide = state("supercalifragilisticexpialidocious", []);
+    const a = pngInfo(await renderPng(wide.st, wide.phrase));
+    check(a.sig && a.w > 1080, `a long single word widens the board (${a.w}x${a.h})`);
+    check(a.h === 1350, `a single word stays one line, so height holds at 1350 (${a.h})`);
+    const back = pngInfo(await renderPng(cases.fresh.st, cases.fresh.phrase));
+    check(back.w === 1080 && back.h === 1350, `a normal board is 1080x1350 again after a wide one (${back.w}x${back.h})`);
+  }
+
   // 4) Clipboard integrity — render -> copy -> read back, byte-identical.
   console.log("\n[clipboard integrity]");
   for (const k of ["fresh", "miss", "win", "loss"] as const) {

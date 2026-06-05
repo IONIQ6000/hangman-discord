@@ -14,9 +14,10 @@ async function shot(name: string, phrase: string, build: (g: Hangman) => void): 
   const png = await renderPng(g.state(), g.phrase);
   await writeFile(`${OUT}/${name}.png`, png);
   const st = g.state();
-  const h = png.readUInt32BE(20); // PNG IHDR height — shows when the board grew past 1350
+  const w = png.readUInt32BE(16); // PNG IHDR width — grows for a long single word
+  const h = png.readUInt32BE(20); // PNG IHDR height — grows for a multi-row phrase
   console.log(
-    `${name.padEnd(8)}  ${png.length.toString().padStart(6)} B  ${1080}x${h}  ` +
+    `${name.padEnd(8)}  ${png.length.toString().padStart(6)} B  ${w}x${h}  ` +
       `status=${st.status} stage=${st.wrong.length} wrong=[${st.wrong.join("")}]`,
   );
 }
@@ -33,7 +34,7 @@ async function main(): Promise<void> {
   // New: punctuation is auto-placed, and a long phrase grows the board taller.
   await shot("punct", "Don't stop believin'!", (g) => g.guess("don't stop believin'"));
   await shot("long", "the quick brown fox jumps over the lazy dog", (g) => g.guess("the quick brown fox jumps over the lazy dog"));
-  await shot("longword", "supercalifragilisticexpialidocious", (g) => ["S", "U", "P", "E", "R"].forEach((c) => g.guess(c)));
+  await shot("longword", "EXTRAORDINARY", (g) => ["E", "R", "A", "T"].forEach((c) => g.guess(c)));
   await closeRenderer();
   console.log(`\nwrote ${OUT}/*.png`);
 }

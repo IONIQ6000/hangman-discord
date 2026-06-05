@@ -74,13 +74,26 @@ test("word grouping and tile counts match the phrase exactly", () => {
 
 test("punctuation is placed as a borderless glyph, not a guessable tile", () => {
   const html = markup("don't");
-  assert.equal(count(html, /class="hm-punct"/g), 1, "the apostrophe is auto-placed");
+  assert.equal(count(html, /class="hm-punct/g), 1, "the apostrophe is auto-placed");
   assert.equal(count(html, /class="hm-tile/g), 4, "only D O N T are tiles");
-  assert.ok(html.includes(`<div class="hm-punct">'</div>`), "apostrophe glyph shown");
+  assert.ok(html.includes(`class="hm-punct hi">'</div>`), "apostrophe glyph shown");
 });
 
 test("the ampersand glyph is HTML-escaped", () => {
   assert.ok(markup("r & b").includes(`<div class="hm-punct">&amp;</div>`));
+});
+
+test("apostrophes ride high and commas sit low for legibility", () => {
+  assert.ok(markup("don't").includes(`class="hm-punct hi"`), "apostrophe is top-aligned");
+  assert.ok(markup("hi, ok").includes(`class="hm-punct lo"`), "comma is baseline-aligned");
+});
+
+test("JetBrains Mono ExtraBold is embedded and used, not assumed installed", () => {
+  const doc = boardDocument(new Hangman("cat").state(), "CAT");
+  assert.ok(doc.includes("@font-face"), "font travels with the document");
+  assert.ok(doc.includes('font-family: "JetBrains Mono"'), "declared as the board font");
+  assert.ok(doc.includes("data:font/woff2;base64,"), "as a self-contained woff2 data URL");
+  assert.ok(doc.includes("font-weight: 800"), "the ExtraBold weight");
 });
 
 test("empty wrong column renders the placeholder dash", () => {

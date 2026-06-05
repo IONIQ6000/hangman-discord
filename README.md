@@ -11,8 +11,11 @@ foundation as Claude Code): a live board, a bordered input, slash commands, and
 **undo that steps all the way back to the start**.
 
 The board image is the **Blueprint** design from `vea/` — a pure-black 1080×1350
-portrait that sits invisibly in dark Discord. The width is fixed; a long phrase
-just wraps onto more rows and the board **grows taller** instead of clipping.
+portrait, set in **JetBrains Mono ExtraBold** (embedded in the renderer), that
+sits invisibly in dark Discord. 1080×1350 is a floor, not a cap: a multi-word
+phrase wraps onto more rows and the board **grows taller**, while a single word
+never breaks — the board **grows wider** to keep it on one line. Either way it
+grows instead of clipping; normal phrases stay exactly 1080×1350.
 
 The phrase can include **common punctuation** (`' " , . ! ? ; : - ( ) &`). It's
 placed on the board from the start — never a tile to guess, never a miss — so
@@ -104,9 +107,15 @@ canvas and isn't used at runtime.
   reveals the answer. **Wrong word/phrase guesses cost nothing** — only letter
   guesses can miss.
 - **Only A–Z is guessable.** Punctuation is auto-placed and matching ignores it,
-  so the win/loss logic and figure are unchanged by it. **Height is a floor, not
-  a cap** (`min-height: 1350`): the renderer measures the laid-out board and
-  grows the headless viewport so a wrapped, taller board is captured whole.
+  so the win/loss logic and figure are unchanged by it.
+- **1080×1350 is a floor.** `min-width`/`min-height` set the floor; `width:
+  min-content` lets the board widen to the longest unbreakable word (the rest
+  wrap below it), and content past the height floor grows it down. The renderer
+  measures the laid-out board and grows the headless viewport to match, so the
+  whole thing is captured whether it grew taller or wider.
+- **Font is embedded, not assumed.** JetBrains Mono ExtraBold rides along as a
+  woff2 data URL (`src/font.ts`) so every render is byte-identical and offline —
+  and its chunky punctuation is legible even alone between empty tiles.
 
 ### Possible next steps
 
